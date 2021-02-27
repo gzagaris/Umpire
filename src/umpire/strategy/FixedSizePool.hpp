@@ -24,11 +24,12 @@
 inline int find_first_set(int i)
 {
 #if defined(_WIN32)
-  #include <intrin.h>
-  unsigned long bit;
-  unsigned long i_l = static_cast<unsigned long>(i);
-  _BitScanForward(&bit, i_l);
-  return static_cast<int>(bit);
+  #if !defined(__MINGW32__)
+    unsigned long bit;
+    unsigned long i_l = static_cast<unsigned long>(i);
+    _BitScanForward(&bit, i_l);
+    return static_cast<int>(bit);
+  #endif
 #else
   return ffs(i);
 #endif
