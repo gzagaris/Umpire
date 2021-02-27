@@ -14,7 +14,7 @@
 
 #include "umpire/util/Macros.hpp"
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <strings.h>
 #endif
@@ -24,11 +24,13 @@ namespace strategy {
 
 inline int find_first_set(int i)
 {
-#if defined(_MSC_VER)
-  unsigned long bit;
-  unsigned long i_l = static_cast<unsigned long>(i);
-  _BitScanForward(&bit, i_l);
-  return static_cast<int>(bit);
+#if defined(_WIN32)
+  #if !defined(__MINGW32__)
+    unsigned long bit;
+    unsigned long i_l = static_cast<unsigned long>(i);
+    _BitScanForward(&bit, i_l);
+    return static_cast<int>(bit);
+  #endif
 #else
   return ffs(i);
 #endif

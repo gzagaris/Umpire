@@ -16,7 +16,7 @@
 #include "umpire/ResourceManager.hpp"
 #include "umpire/config.hpp"
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
 #include <unistd.h>
 #endif
 #include <fstream>
@@ -127,7 +127,7 @@ std::string get_backtrace(void* ptr)
 
 std::size_t get_process_memory_usage()
 {
-#if defined(_MSC_VER) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
   return 0;
 #else
   std::size_t ignore;

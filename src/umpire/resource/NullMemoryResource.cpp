@@ -14,7 +14,7 @@
 
 #include "umpire/util/Macros.hpp"
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
 #include <sys/mman.h>
 #else
 #include <windows.h>
@@ -27,12 +27,12 @@ NullMemoryResource::NullMemoryResource(Platform platform,
                                        const std::string& name, int id,
                                        MemoryResourceTraits traits)
     : MemoryResource(name, id, traits), m_platform{platform}, m_size_map{}
-{
+{ 
 }
 
 void* NullMemoryResource::allocate(std::size_t bytes)
 {
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   void* ptr{mmap(NULL, bytes, PROT_NONE,
                  (MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE), -1, 0)};
 #else
@@ -55,7 +55,7 @@ void NullMemoryResource::deallocate(void* ptr)
 
   m_size_map.erase(ptr);
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   munmap(ptr, *size);
 #else
   VirtualFree(ptr, *size, MEM_RELEASE);

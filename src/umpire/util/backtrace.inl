@@ -18,16 +18,16 @@
 #include "umpire/config.hpp"
 #include "umpire/util/backtrace.hpp"
 
-#if !defined(_MSC_VER) && !defined(_LIBCPP_VERSION)
+#if !defined(_WIN32) && !defined(_LIBCPP_VERSION)
 #include <cxxabi.h> // for __cxa_demangle
 #endif              // !defined(_MSC_VER) && !defined(_LIBCPP_VERSION)
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
 #if defined(UMPIRE_ENABLE_BACKTRACE_SYMBOLS)
 #include <dlfcn.h>    // for dladdr
 #endif                // defined(UMPIRE_ENABLE_BACKTRACE_SYMBOLS)
 #include <execinfo.h> // for backtrace
-#endif                // !defined(_MSC_VER)
+#endif                // !defined(_WIN32)
 
 namespace umpire {
 namespace util {
@@ -60,7 +60,7 @@ bool backtrace_enabled()
 std::vector<void*> build_backtrace()
 {
   std::vector<void*> frames;
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   void* callstack[128];
   const int nMaxFrames = sizeof(callstack) / sizeof(callstack[0]);
   for (int i = 0; i < ::backtrace(callstack, nMaxFrames); ++i)
@@ -72,7 +72,7 @@ std::vector<void*> build_backtrace()
 std::string stringify(const std::vector<void*>& frames)
 {
   std::ostringstream backtrace_stream;
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   int num_frames = frames.size();
   char** symbols = ::backtrace_symbols(&frames[0], num_frames);
 

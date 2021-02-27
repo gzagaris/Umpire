@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #endif
 
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
 #include <unistd.h> // getpid()
 #else
 #include <process.h>
@@ -114,7 +114,7 @@ void initialize_io(const bool enable_log, const bool enable_replay)
         struct stat info;
         if (stat(root_io_dir.c_str(), &info)) {
           if (enable_log || enable_replay) {
-#ifndef WIN32
+#ifndef _WIN32
             if (mkdir(root_io_dir.c_str(),
                       S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
               UMPIRE_ERROR("mkdir(" << root_io_dir << ") failed");

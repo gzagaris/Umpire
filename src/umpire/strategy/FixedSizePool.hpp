@@ -14,7 +14,7 @@
 
 #include "StdAllocator.hpp"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #pragma warning(disable : 4245)
@@ -23,7 +23,7 @@
 
 inline int find_first_set(int i)
 {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   unsigned long bit;
   unsigned long i_l = static_cast<unsigned long>(i);
   _BitScanForward(&bit, i_l);
@@ -188,7 +188,7 @@ class FixedSizePool {
   }
 };
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #pragma warning(pop)
 #endif
 
