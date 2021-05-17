@@ -20,7 +20,7 @@ QuickPool::QuickPool(const std::string& name, int id, Allocator allocator,
                      const std::size_t next_minimum_pool_allocation_size,
                      std::size_t alignment,
                      CoalesceHeuristic should_coalesce) noexcept
-    : AllocationStrategy{name, id, allocator.getAllocationStrategy()},
+    : AllocationStrategy{name, id, allocator.getAllocationStrategy(), "QuickPool"},
       mixins::AlignedAllocation{alignment, allocator.getAllocationStrategy()},
       m_should_coalesce{should_coalesce},
       m_first_minimum_pool_allocation_size{first_minimum_pool_allocation_size},
@@ -91,6 +91,8 @@ void* QuickPool::allocate(std::size_t bytes)
 
     m_actual_bytes += size;
     m_releasable_bytes += size;
+    m_releasable_blocks++;
+    m_total_blocks++;
 
     void* chunk_storage{m_chunk_pool.allocate()};
     chunk = new (chunk_storage) Chunk{ret, size, size};
@@ -106,6 +108,7 @@ void* QuickPool::allocate(std::size_t bytes)
 
   if ((chunk->size == chunk->chunk_size) && chunk->free) {
     m_releasable_bytes -= chunk->chunk_size;
+    m_releasable_blocks--;
   }
 
   void* ret = chunk->data;
@@ -136,15 +139,19 @@ void* QuickPool::allocate(std::size_t bytes)
         m_size_map.insert(std::make_pair(remaining, split_chunk));
   }
 
+  m_current_bytes += rounded_bytes;
+
   UMPIRE_UNPOISON_MEMORY_REGION(m_allocator, ret, bytes);
   return ret;
 }
 
-void QuickPool::deallocate(void* ptr)
+void QuickPool::deallocate(void* ptr, std::size_t UMPIRE_UNUSED_ARG(size))
 {
   UMPIRE_LOG(Debug, "(ptr=" << ptr << ")");
   auto chunk = (*m_pointer_map.find(ptr)).second;
   chunk->free = true;
+
+  m_current_bytes -= chunk->size;
 
   UMPIRE_LOG(Debug, "Deallocating data held by " << chunk);
 
@@ -189,6 +196,7 @@ void QuickPool::deallocate(void* ptr)
              "Inserting chunk " << chunk << " with size " << chunk->size);
 
   if (chunk->size == chunk->chunk_size) {
+    m_releasable_blocks++;
     m_releasable_bytes += chunk->chunk_size;
   }
 
@@ -220,6 +228,8 @@ void QuickPool::release()
 
       m_actual_bytes -= chunk->chunk_size;
       m_releasable_bytes -= chunk->chunk_size;
+      m_releasable_blocks--;
+      m_total_blocks--;
 
       try {
         aligned_deallocate(chunk->data);
@@ -252,9 +262,24 @@ void QuickPool::release()
 #endif
 }
 
+std::size_t QuickPool::getReleasableBlocks() const noexcept
+{
+  return m_releasable_blocks;
+}
+
+std::size_t QuickPool::getTotalBlocks() const noexcept
+{
+  return m_total_blocks;
+}
+
 std::size_t QuickPool::getActualSize() const noexcept
 {
   return m_actual_bytes;
+}
+
+std::size_t QuickPool::getCurrentSize() const noexcept
+{
+  return m_current_bytes;
 }
 
 std::size_t QuickPool::getReleasableSize() const noexcept
@@ -273,6 +298,12 @@ Platform QuickPool::getPlatform() noexcept
 MemoryResourceTraits QuickPool::getTraits() const noexcept
 {
   return m_allocator->getTraits();
+}
+
+bool 
+QuickPool::tracksMemoryUse() const noexcept
+{
+  return false;
 }
 
 std::size_t QuickPool::getBlocksInPool() const noexcept
@@ -302,16 +333,21 @@ void QuickPool::do_coalesce() noexcept
   std::size_t size_pre{getActualSize()};
   release();
   std::size_t size_post{getActualSize()};
-  std::size_t alloc_size{size_pre - size_post};
 
-  //
-  // Only perform the coalesce if there were bytes found to coalesce
-  //
-  if (alloc_size) {
+  if (size_post < size_pre) {
+    std::size_t alloc_size{size_pre - size_post};
+
     UMPIRE_LOG(Debug, "coalescing " << alloc_size << " bytes.");
     auto ptr = allocate(alloc_size);
-    deallocate(ptr);
+    deallocate(ptr, alloc_size);
   }
+}
+
+QuickPool::CoalesceHeuristic QuickPool::blocks_releasable(std::size_t nblocks)
+{
+  return [=](const strategy::QuickPool& pool) {
+    return (pool.getReleasableBlocks() > nblocks);
+  };
 }
 
 QuickPool::CoalesceHeuristic QuickPool::percent_releasable(int percentage)

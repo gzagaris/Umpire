@@ -19,7 +19,7 @@ DynamicPoolList::DynamicPoolList(
     const std::size_t first_minimum_pool_allocation_size,
     const std::size_t next_minimum_pool_allocation_size,
     const std::size_t alignment, CoalesceHeuristic should_coalesce) noexcept
-    : AllocationStrategy{name, id, allocator.getAllocationStrategy()},
+    : AllocationStrategy{name, id, allocator.getAllocationStrategy(), "DynamicPoolList"},
       m_allocator{allocator.getAllocationStrategy()},
       dpa{m_allocator, first_minimum_pool_allocation_size,
           next_minimum_pool_allocation_size, alignment},
@@ -35,7 +35,7 @@ void* DynamicPoolList::allocate(size_t bytes)
   return ptr;
 }
 
-void DynamicPoolList::deallocate(void* ptr)
+void DynamicPoolList::deallocate(void* ptr, std::size_t UMPIRE_UNUSED_ARG(size))
 {
   UMPIRE_LOG(Debug, "(ptr=" << ptr << ")");
   dpa.deallocate(ptr);
@@ -53,6 +53,16 @@ void DynamicPoolList::release()
 {
   UMPIRE_LOG(Debug, "()");
   dpa.release();
+}
+
+std::size_t DynamicPoolList::getReleasableBlocks() const noexcept
+{
+  return dpa.getReleasableBlocks();
+}
+
+std::size_t DynamicPoolList::getTotalBlocks() const noexcept
+{
+  return dpa.getTotalBlocks();
 }
 
 std::size_t DynamicPoolList::getCurrentSize() const noexcept
@@ -100,6 +110,11 @@ MemoryResourceTraits DynamicPoolList::getTraits() const noexcept
   return m_allocator->getTraits();
 }
 
+bool 
+DynamicPoolList::tracksMemoryUse() const noexcept {
+  return true;
+}
+
 void DynamicPoolList::coalesce() noexcept
 {
   UMPIRE_LOG(Debug, "()");
@@ -108,8 +123,14 @@ void DynamicPoolList::coalesce() noexcept
   dpa.coalesce();
 }
 
-DynamicPoolList::CoalesceHeuristic DynamicPoolList::percent_releasable(
-    int percentage)
+DynamicPoolList::CoalesceHeuristic DynamicPoolList::blocks_releasable(std::size_t nblocks)
+{
+  return [=](const strategy::DynamicPoolList& pool) {
+    return (pool.getReleasableBlocks() > nblocks);
+  };
+}
+
+DynamicPoolList::CoalesceHeuristic DynamicPoolList::percent_releasable(int percentage)
 {
   if (percentage < 0 || percentage > 100) {
     UMPIRE_ERROR("Invalid percentage of "

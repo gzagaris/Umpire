@@ -27,7 +27,7 @@ DynamicPoolMap::DynamicPoolMap(
     const std::size_t first_minimum_pool_allocation_size,
     const std::size_t next_minimum_pool_allocation_size,
     const std::size_t alignment, CoalesceHeuristic should_coalesce) noexcept
-    : AllocationStrategy{name, id, allocator.getAllocationStrategy()},
+    : AllocationStrategy{name, id, allocator.getAllocationStrategy(), "DynamicPoolMap"},
       mixins::AlignedAllocation{alignment, allocator.getAllocationStrategy()},
       m_should_coalesce{should_coalesce},
       m_first_minimum_pool_allocation_size{first_minimum_pool_allocation_size},
@@ -126,7 +126,7 @@ void* DynamicPoolMap::allocate(std::size_t bytes)
   return ptr;
 }
 
-void DynamicPoolMap::deallocate(void* ptr)
+void DynamicPoolMap::deallocate(void* ptr, std::size_t UMPIRE_UNUSED_ARG(size))
 {
   UMPIRE_LOG(Debug, "(ptr=" << ptr << ")");
 
@@ -242,6 +242,12 @@ Platform DynamicPoolMap::getPlatform() noexcept
 MemoryResourceTraits DynamicPoolMap::getTraits() const noexcept
 {
   return m_allocator->getTraits();
+}
+
+bool 
+DynamicPoolMap::tracksMemoryUse() const noexcept
+{
+  return false;
 }
 
 void DynamicPoolMap::coalesce()

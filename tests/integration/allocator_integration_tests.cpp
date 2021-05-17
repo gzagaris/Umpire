@@ -124,7 +124,11 @@ TEST_P(AllocatorTest, get_allocator_records)
 
   auto records = umpire::get_allocator_records(*m_allocator);
 
-  ASSERT_EQ(records.size(), 1);
+  for (const auto& r : records) {
+    std::cout << r.ptr << " " << r.size << " " << r.strategy << std::endl;
+  }
+
+  EXPECT_EQ(records.size(), 1);
 
   m_allocator->deallocate(data);
 }
@@ -149,6 +153,11 @@ TEST_P(AllocatorTest, getActualSize)
   ASSERT_EQ(m_allocator->getActualSize(), 128);
 
   m_allocator->deallocate(data);
+}
+
+TEST_P(AllocatorTest, getStrategyName)
+{
+  ASSERT_EQ(m_allocator->getStrategyName(), "MemoryResource");
 }
 
 std::vector<std::string> allocator_strings()
@@ -295,7 +304,7 @@ TEST(Allocation, DeallocateDifferent)
   ASSERT_NO_THROW(alloc_one.deallocate(data));
 }
 
-#if defined(UMPIRE_ENABLE_CUDA) || defined(UMPIRE_ENABLE_HIP)
+#if defined(UMPIRE_ENABLE_CUDA) || defined(UMPIRE_ENABLE_HIP) || defined(UMPIRE_ENABLE_SYCL)
 TEST(Allocator, DeallocateDifferentUMDevice)
 {
   auto& rm = umpire::ResourceManager::getInstance();

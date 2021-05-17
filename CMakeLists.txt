@@ -14,7 +14,7 @@ include(CMakeDependentOption)
 
 project(Umpire
   LANGUAGES CXX C
-  VERSION 5.0.0)
+  VERSION 5.0.1)
 
 set(UMPIRE_VERSION_RC "")
 
@@ -25,7 +25,6 @@ mark_as_advanced(ENABLE_DEVELOPER_DEFAULTS ENABLE_DEVELOPER_BENCHMARKS)
 if (ENABLE_DEVELOPER_DEFAULTS)
   set(ENABLE_WARNINGS_AS_ERRORS On CACHE BOOL "")
   set(ENABLE_TOOLS On CACHE BOOL "")
-  set(ENABLE_DEVICE_CONST On CACHE BOOL "")
 endif ()
 
 set(ENABLE_CUDA Off CACHE BOOL "")
@@ -34,19 +33,8 @@ set(ENABLE_SYCL Off CACHE BOOL "")
 set(ENABLE_NUMA Off CACHE BOOL "")
 set(ENABLE_OPENMP Off CACHE BOOL "")
 set(ENABLE_COPY_HEADERS Off CACHE BOOL "")
-
-cmake_dependent_option( UMPIRE_ENABLE_TESTS "Build Umpire tests" On 
-                       "ENABLE_TESTS" Off )
-
 set(ENABLE_GMOCK On CACHE BOOL "")
-
-cmake_dependent_option( UMPIRE_ENABLE_DOCS "Build Umpire docs" On
-                        "ENABLE_DOCS" Off )
-
 set(ENABLE_CLANGQUERY Off CACHE BOOL "")
-
-cmake_dependent_option( UMPIRE_ENABLE_EXAMPLES "Build Umpire examples" On 
-                        "ENABLE_EXAMPLES" Off )
 
 option(ENABLE_LOGGING "Build Umpire with Logging enabled" On)
 option(ENABLE_SLIC "Build Umpire with SLIC logging" Off)
@@ -59,6 +47,7 @@ option(ENABLE_TOOLS "Enable Umpire development tools" Off)
 option(ENABLE_DEVICE_CONST "Enable constant memory on GPUs" Off)
 option(ENABLE_OPENMP_TARGET "Enable OpenMP target support" Off)
 option(ENABLE_PERFORMANCE_TESTS "Enable additional performance tests" Off)
+option(ENABLE_ASAN "Enable use with address sanitizer tools" Off)
 option(ENABLE_SANITIZER_TESTS "Enable address sanitizer tests" Off)
 if(WIN32 OR APPLE)
   set(ENABLE_FILE_RESOURCE Off CACHE BOOL "")
@@ -140,6 +129,20 @@ if (NOT BLT_LOADED)
 
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 endif()
+
+#######################################
+# Options that depend on BLT Options
+#######################################
+cmake_dependent_option( UMPIRE_ENABLE_TESTS "Build Umpire tests" On
+                       "ENABLE_TESTS" Off )
+cmake_dependent_option( UMPIRE_ENABLE_DOCS "Build Umpire docs" On
+                        "ENABLE_DOCS" Off )
+cmake_dependent_option( UMPIRE_ENABLE_EXAMPLES "Build Umpire examples" On
+                        "ENABLE_EXAMPLES" Off )
+
+cmake_dependent_option(
+  ENABLE_HOST_SHARED_MEMORY "Enable Host Shared Memory Resource" Off
+  "ENABLE_MPI;NOT WIN32;NOT APPLE" Off )
 
 if (Git_FOUND)
   blt_git_hashcode (HASHCODE umpire_sha1

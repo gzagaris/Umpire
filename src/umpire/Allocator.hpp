@@ -10,8 +10,11 @@
 #include <cstddef>
 #include <memory>
 #include <ostream>
+#include <string>
 
 #include "umpire/strategy/AllocationStrategy.hpp"
+#include "umpire/strategy/mixins/Inspector.hpp"
+#include "umpire/strategy/mixins/AllocateNull.hpp"
 #include "umpire/util/Platform.hpp"
 
 class AllocatorTest;
@@ -19,6 +22,13 @@ class AllocatorTest;
 namespace umpire {
 
 class ResourceManager;
+
+namespace op {
+
+class HostReallocateOperation;
+class GenericReallocateOperation;
+
+}
 
 /*!
  * \brief Provides a unified interface to allocate and free data.
@@ -30,9 +40,13 @@ class ResourceManager;
  *
  * \see TypedAllocator
  */
-class Allocator {
+class Allocator : 
+  private strategy::mixins::Inspector, strategy::mixins::AllocateNull
+{
   friend class ResourceManager;
   friend class ::AllocatorTest;
+  friend class umpire::op::HostReallocateOperation;
+  friend class umpire::op::GenericReallocateOperation;
 
  public:
   /*!
@@ -50,6 +64,8 @@ class Allocator {
    * \return Pointer to start of the allocation.
    */
   inline void* allocate(std::size_t bytes);
+
+  inline void* allocate(const std::string& name, std::size_t bytes);
 
   /*!
    * \brief Free the memory at ptr.
@@ -159,6 +175,10 @@ class Allocator {
    */
   Platform getPlatform() noexcept;
 
+  bool isTracked() const noexcept;
+
+  const std::string& getStrategyName() const noexcept; 
+
   Allocator() = default;
 
   friend std::ostream& operator<<(std::ostream&, const Allocator&);
@@ -179,6 +199,8 @@ class Allocator {
    * \brief Pointer to the AllocationStrategy used by this Allocator.
    */
   umpire::strategy::AllocationStrategy* m_allocator;
+
+  bool m_tracking{true};
 };
 
 } // end of namespace umpire
